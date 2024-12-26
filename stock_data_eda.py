@@ -1,5 +1,4 @@
 import os
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -25,7 +24,7 @@ class StockDataEDA:
         self.df = self._preprocess_data(df)
         self.symbol = symbol
 
-        os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)  # Ensures the output directory exists; creates it if not
         self.output_dir = output_dir
 
     def _preprocess_data(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -40,23 +39,26 @@ class StockDataEDA:
         """
         df = df.copy()
 
-        # Rolling window calculations
+        # Rolling window calculations (average of 50 entries)
         df['50_Day_MA'] = df['Close'].rolling(window=50).mean()
         df['200_Day_MA'] = df['Close'].rolling(window=200).mean()
 
         # Price momentum indicators
-        df['Daily_Return'] = df['Close'].pct_change()
-        df['Cumulative_Return'] = (1 + df['Daily_Return']).cumprod() - 1
+        df['Daily_Return'] = df['Close'].pct_change()  # Percentage change in daily closing prices
+        df['Cumulative_Return'] = (1 + df['Daily_Return']).cumprod() - 1  # Total return over time
+        print(df)
 
-        # Volatility measures
-        df['Rolling_Volatility'] = df['Daily_Return'].rolling(window=30).std() * np.sqrt(252)
+        # 30-day rolling standard deviation scaled to annualized volatility
+        # Calculates the price's chance to change rapidly over a specified period
+        df['Rolling_Volatility'] = df['Daily_Return'].rolling(window=30).std() * np.sqrt(252)  # (trading days in a year)
+        print(df)
 
         # Relative Strength Index (RSI)
         delta = df['Close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()  # Average of positive price changes over 14 days
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()  # Average of negative price changes over 14 days
         rs = gain / loss
-        df['RSI'] = 100 - (100 / (1 + rs))
+        df['RSI'] = 100 - (100 / (1 + rs))  # Final RSI formula converts this to a 0-100 scale
 
         return df
 
@@ -120,7 +122,11 @@ class StockDataEDA:
     def basic_statistics(self) -> dict:
         stats_dict = {
             'Descriptive Statistics': self.df[['Open', 'High', 'Low', 'Close', 'Volume']].describe().to_dict(),
+
+            # Measure of asymmetry or distortion of symmetric distribution
             'Skewness': self.df[['Open', 'High', 'Low', 'Close']].apply(lambda x: x.skew()).to_dict(),
+
+            # Statistical measure that describes the shape of a probability distribution by quantifying its tail
             'Kurtosis': self.df[['Open', 'High', 'Low', 'Close']].apply(lambda x: x.kurtosis()).to_dict()
         }
         return stats_dict
@@ -161,6 +167,7 @@ class StockDataEDA:
         axes[0, 1].set_title('Daily Returns Distribution')
 
         # Q-Q Plot for Normality
+        # A Q-Q (quantile-quantile) plot is used to assess whether the Daily_Return data follows a normal distribution.
         stats.probplot(self.df['Daily_Return'].dropna(), plot=axes[1, 0])
         axes[1, 0].set_title('Q-Q Plot of Daily Returns')
 
@@ -200,12 +207,18 @@ class StockDataEDA:
 
         fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(15, 15))
         result.observed.plot(ax=ax1)
+        # Shows the original stock price data
         ax1.set_title('Observed')
         result.trend.plot(ax=ax2)
+        # Shows the long-term progression of the stock price after removing seasonal and residual components
         ax2.set_title('Trend')
         result.seasonal.plot(ax=ax3)
+        # Shows recurring patterns that happen at fixed intervals
+        # The regular up and down patterns suggest there are yearly cycles
         ax3.set_title('Seasonal')
         result.resid.plot(ax=ax4)
+        # Shows what's left after removing both trend and seasonal components
+        # Spikes indicate unusual price movements that don't fit the trend or seasonal patterns
         ax4.set_title('Residual')
 
         self.save_and_show_plot(plt, 'seasonal_decomposition.png')
@@ -215,21 +228,26 @@ class StockDataEDA:
         Advanced risk and return metrics visualization
         """
         plt.figure(figsize=(15, 10))
-
+        # Notable spikes in recent periods suggesting increased market uncertainty
+        # Useful for risk assessment and trading decisions
         plt.subplot(2, 2, 1)
         self.df['Rolling_Volatility'].plot()
         plt.title('30-Day Rolling Volatility')
 
+        # Shows periods where the stock might be overvalued or undervalued
+        # Trading signal indicator: buy when below 30, sell when above 70
         plt.subplot(2, 2, 2)
         self.df['RSI'].plot()
         plt.title('Relative Strength Index (RSI)')
         plt.axhline(y=70, color='red', linestyle='--')
         plt.axhline(y=30, color='green', linestyle='--')
 
+        # Provided significant returns to investors
         plt.subplot(2, 2, 3)
         plt.plot(self.df['Date'], self.df['Cumulative_Return'])
         plt.title('Cumulative Returns')
 
+        # Helps understand typical daily price movements and extreme events
         plt.subplot(2, 2, 4)
         plt.boxplot(self.df['Daily_Return'].dropna())
         plt.title('Daily Returns Boxplot')
