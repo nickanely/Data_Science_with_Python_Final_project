@@ -8,6 +8,13 @@ This project implements a comprehensive financial market analysis system with th
 - Anomaly detection in transactions
 - Extensive data processing and visualization
 
+## Contributions:
+- Anastasia Sulukhia: Whole machine learning algorithm (stock_price_predictor.py)
+- Ana Avkopashvili: Stock and transactions data manipulations (stock_data_eda.py & transactions_data_processor.py)
+- Nikoloz Aneli: Data processing (generate_transactions_data.py & stock_data_processor.py)
+
+Note: Workload during the development was distributed equally between members
+
 ## Features
 
 ### Data Processing & Cleaning
@@ -89,4 +96,5 @@ Install required packages:
 
 ## Requirements
 See `requirements.txt` for a complete list of dependencies.
+
 
